@@ -77,6 +77,6 @@ torch==1.11.0
 #### EoL處理  
 * 透過對EoL的數值取log2來減少過大過小值對模型的影響，可以看到在取log後的數據分布更加集中且較接近常態分佈。  
 <img src="https://hackmd.io/_uploads/Sk8zCoeBh.png" width="600" alt="img01"/>
-#### For QGCN
-* Run the code in QGCN.ipynb
-* For environment setting, please refer to pip list.txt
+For QGCN
+ Run the code in QGCN.ipynb
+ For environment setting, please refer to pip list.txt
