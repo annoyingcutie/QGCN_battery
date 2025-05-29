@@ -32,7 +32,10 @@ class Feature_Selector_Dataset(Dataset):
     def visualize(self, index, feature_id):
         feature_list =  ['Voltage', 'Discharge capacity', 'Current', 'Temperature']
         curve = self.input[index, feature_id, :]
+        xcat = np.arange(0,500,100)
+        ycat = self.input[index, feature_id, xcat]
         plt.plot(np.arange(len(curve)), curve, c='red')
+        plt.scatter(xcat,ycat,c='blue')
         plt.ylabel(feature_list[feature_id], fontsize=14)
         plt.xlabel('time', fontsize=14)
         plt.show()

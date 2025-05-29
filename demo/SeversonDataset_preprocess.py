@@ -148,7 +148,7 @@ def linear_interpolation(seq, points=500):
         #print(interp_list[-1])
     return np.vstack(interp_list)
 
-def RDP(seq):
+def RDP(seq,points=300):
     #Need to modify the method that can assign certain data points
     interp_list = []
     
@@ -156,8 +156,8 @@ def RDP(seq):
         interp_id = np.linspace(0, len(s)-1, len(s))
         #print(interp_id.shape)
         #print(s.shape)
-        #rdp_points = rdp(np.array(np.vstack([interp_id,s])))
-        rdp_points = rdp_fixed_points_exact(np.array(np.vstack([interp_id,s])),num_points=300)
+        rdp_points = rdp(np.array(np.vstack([interp_id,s])))
+        #rdp_points = rdp_fixed_points_exact(np.array(np.vstack([interp_id,s])),num_points=300)
         #print(rdp_points)
         rdp_points = rdp_points[1,:]
         rdp_points = rdp_points.reshape(1,-1)
