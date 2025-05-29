@@ -1,6 +1,10 @@
 ## 鋰電池壽命預測模型復現  
 
 復現的模型為學長發表的論文: [Deep neural network battery life and voltage prediction by using data of one cycle only](https://www.sciencedirect.com/science/article/pii/S0306261921014112?via%3Dihub)
+## For Quantum Graph Convolutional Network
+* Run the code in /demo/GCN_binary.ipynb or QGCN_regression.ipynb
+* For environment setting, please refer to pip list.txt
+
 
 ### 基本名詞解釋  
 * SoH(state of health): 目前電池的最大容量與出廠容量的比例。ex.一個原廠設定最大容量是1Ah的電池被耗損到只能充進0.8Ah的電量→80%SOH
@@ -78,6 +82,3 @@ torch==1.11.0
 * 透過對EoL的數值取log2來減少過大過小值對模型的影響，可以看到在取log後的數據分布更加集中且較接近常態分佈。  
 <img src="https://hackmd.io/_uploads/Sk8zCoeBh.png" width="600" alt="img01"/>
 
-## For QGCN
-* Run the code in QGCN.ipynb
-* For environment setting, please refer to pip list.txt
