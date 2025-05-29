@@ -32,10 +32,7 @@ class Feature_Selector_Dataset(Dataset):
     def visualize(self, index, feature_id):
         feature_list =  ['Voltage', 'Discharge capacity', 'Current', 'Temperature']
         curve = self.input[index, feature_id, :]
-        xcat = np.arange(0,500,100)
-        ycat = self.input[index, feature_id, xcat]
         plt.plot(np.arange(len(curve)), curve, c='red')
-        plt.scatter(xcat,ycat,c='blue')
         plt.ylabel(feature_list[feature_id], fontsize=14)
         plt.xlabel('time', fontsize=14)
         plt.show()
@@ -142,24 +139,26 @@ class Predictor3_Dataset(Dataset):
         plt.close()
 
 
-def load_Severson(training=True, norm=False, part='discharge'):
+
+
+def load_Severson(training=True, norm=False, points=256,part='discharge'):
     folder_path = 'Severson_Dataset/feature_selector_discharge/'
-    index = range(500-1) if part == 'charge' else range(500, 1000, 1)
+    index = range(points) if part == 'charge' else range(points, 2*points, 1)
     if training:
         feature, target = np.load(folder_path+'trn_features.npy')[:, :, index], np.load(folder_path+'trn_targets.npy')
     else:
         feature, target = np.load(folder_path+'val_features.npy')[:, :, index], np.load(folder_path+'val_targets.npy')
     if norm:
-        return normalize(feature), normalize(target)
+        return normalize(feature,points), normalize(target,points)
     else:
-        return normalize(feature), target
+        return normalize(feature,points), target
  
 
-def get_scaler(pred_target='EOL'):
+def get_scaler(pred_target='EOL',points=256):
     """get the normalize scaler in training set"""
     assert pred_target=='EOL' or pred_target=='chargetime' or pred_target=='quality' or pred_target=='both' 
     scaler_x, scaler_y = StandardScaler(), StandardScaler()
-    feature =  np.load('Severson_Dataset/feature_selector_discharge/trn_features.npy')[:, :, 500:]
+    feature =  np.load('Severson_Dataset/feature_selector_discharge/trn_features.npy')[:, :, points:]
     target = np.load('Severson_Dataset/feature_selector_discharge/trn_targets.npy')
     scaler_x.fit(feature.transpose((0, 2, 1)).reshape(-1, 4))
 
@@ -175,11 +174,11 @@ def get_scaler(pred_target='EOL'):
     return scaler_x, scaler_y
 
 
-def normalize(data):
-    scaler_x, scaler_y = get_scaler('both')
+def normalize(data,points):
+    scaler_x, scaler_y = get_scaler('EOL',points)
     c = data.shape[1] # channel
     if c>2: # feature
-        data = scaler_x.transform(data.transpose((0, 2, 1)).reshape(-1, c)).reshape(-1, 500, c).transpose((0, 2, 1))
+        data = scaler_x.transform(data.transpose((0, 2, 1)).reshape(-1, c)).reshape(-1, points, c).transpose((0, 2, 1))
     else: # target
         data = scaler_y.transform(data.reshape(-1, c))
     return data

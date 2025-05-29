@@ -17,7 +17,8 @@ from rdp import rdp, rdp_fixed_points_exact
 其額定電容量為1.11Ah 額定電壓為3.3V
 資料被分為三個bath
 """
-def mat_to_npy(save_path='Severson_Dataset/npdata_each_cell(qv)/', cycle_length=50, mode='interp'):
+cycle_length = 8
+def mat_to_npy(save_path='Severson_Dataset/npdata_each_cell(qv)/', cycle_length=8, mode='rdp'):
     """
     將mat檔中需要的資料截取至npy檔
     包含各電池summary(所有cycle的Qc, Qd, Tmin, Tmax, Tavg, Chargetime)
@@ -60,6 +61,9 @@ def mat_to_npy(save_path='Severson_Dataset/npdata_each_cell(qv)/', cycle_length=
             # 儲存循環間資訊
             summary = np.vstack([Qc_summary, Qd_summary, Tmin, Tmax, Tavg, Chargetime]) # shape:(6, n_cycle)
             cycle = summary.shape[1]
+            
+
+
             """
             count = 0
             if summary[1,200] > 0.8 * summary[1,1]:
@@ -118,6 +122,12 @@ def mat_to_npy(save_path='Severson_Dataset/npdata_each_cell(qv)/', cycle_length=
                     cycle_info[-1] = temp
 
             #label battery into good or bad
+            if cycle < 760:
+                quality = np.zeros((1, cycle))
+            else:
+                quality = np.ones((1, cycle))
+            summary = np.vstack([summary,quality])
+            """
             if Qd[200] > 0.8*Qd[1]:
                 quality = np.ones((1, cycle))
                 #count_1 = count_1 + 1
@@ -125,7 +135,7 @@ def mat_to_npy(save_path='Severson_Dataset/npdata_each_cell(qv)/', cycle_length=
                 quality = np.zeros((1, cycle))
                 #count_0 = count_0 + 1
             summary = np.vstack([summary,quality])
-
+            """
             if b==0:
                 np.save(save_path+key+'_summary', summary[:, 1:])
             else:
@@ -148,24 +158,22 @@ def linear_interpolation(seq, points=500):
         #print(interp_list[-1])
     return np.vstack(interp_list)
 
-def RDP(seq,points=300):
+def RDP(seq, points=256):
     #Need to modify the method that can assign certain data points
     interp_list = []
-    
     for s in seq:
         interp_id = np.linspace(0, len(s)-1, len(s))
         #print(interp_id.shape)
         #print(s.shape)
         rdp_points = rdp(np.array(np.vstack([interp_id,s])))
         #rdp_points = rdp_fixed_points_exact(np.array(np.vstack([interp_id,s])),num_points=300)
-        #print(rdp_points)
-        rdp_points = rdp_points[1,:]
-        rdp_points = rdp_points.reshape(1,-1)
+        #print(rdp_points.shape)
+        rdp_points_interp= linear_interpolation(rdp_points,points)
+        rdp_points_interp = rdp_points_interp[1,:]
+        rdp_points_interp = rdp_points_interp.reshape(1,-1)
         #rdp_points = rdp_points[:,0:253]
-        print(rdp_points.shape)
-        interp_list.append(rdp_points)
-
-
+        #print(rdp_points_interp.shape)
+        interp_list.append(rdp_points_interp)
     return np.vstack(interp_list)
 
 def uniform_qvcurve(qd, v, c, t, points=500):
@@ -194,6 +202,10 @@ def data_visualization(f_id, cycles=2000):
         plt.plot(np.arange(eol), summary[f_id, :], c=cmap((eol-200)/1800), alpha=0.7)
         #plt.plot(np.arange(cycles), summary[f_id, :cycles], c=cmap((eol-200)/1800), alpha=0.7)
     print("min EOL: %d, max EOL: %d"%(min(eols), max(eols)))
+    sort_eols = sorted(eols)
+    print(sort_eols)
+    print(len(sort_eols))
+    print(sort_eols[57])
     sm = plt.cm.ScalarMappable(norm=plt.Normalize(vmin=200, vmax=2000),cmap='coolwarm_r')
     sm.set_array([])
     plt.colorbar(sm)
@@ -204,7 +216,7 @@ def data_visualization(f_id, cycles=2000):
     plt.close()
 
     
-def train_val_split(train_ratio=0.8, seed=15, save_path='Severson_Dataset/feature_selector_discharge/'):
+def train_val_split(train_ratio=0.8, seed=15, save_path='Severson_Dataset/feature_selector_discharge/',cycle_length = 8):
     load_path = 'Severson_Dataset/npdata_each_cell(qv)/'
     filename = sorted(os.listdir(load_path))
     features, targets, all_summary = [], [], []
@@ -219,7 +231,7 @@ def train_val_split(train_ratio=0.8, seed=15, save_path='Severson_Dataset/featur
         eol, chargetime_end, quality = len(summary[0]), summary[5, -1],summary[6,1]
         features.append(curve)
         targets.append(np.array([eol, chargetime_end, quality]))
-        all_summary.append(np.expand_dims(summary[:, :100], axis=0))
+        all_summary.append(np.expand_dims(summary[:, :cycle_length], axis=0))
     # 根據seed設定隨機調整順序
     #features = features[b1_size:b2_size]+features[:b1_size]+features[(b1_size+b2_size):]
     #targets = targets[b1_size:b2_size]+targets[:b1_size]+targets[(b1_size+b2_size):]
@@ -233,12 +245,16 @@ def train_val_split(train_ratio=0.8, seed=15, save_path='Severson_Dataset/featur
     split_point = int(len(targets)*train_ratio)
     np.save(save_path+'trn_features', np.concatenate(features[:split_point]))
     np.save(save_path+'val_features', np.concatenate(features[split_point:]))
-    np.save(save_path+'trn_targets', np.repeat(np.vstack(targets[:split_point]), 50, axis=0))
-    np.save(save_path+'val_targets', np.repeat(np.vstack(targets[split_point:]), 50, axis=0))
+    np.save(save_path+'trn_targets', np.repeat(np.vstack(targets[:split_point]), cycle_length, axis=0))
+    np.save(save_path+'val_targets', np.repeat(np.vstack(targets[split_point:]), cycle_length, axis=0))
+    #modified for EOL
+    #np.save(save_path+'trn_targets', np.repeat(np.vstack(targets[:split_point]), 256, axis=0))
+    #np.save(save_path+'val_targets', np.repeat(np.vstack(targets[split_point:]), 256, axis=0))
     np.save(save_path+'trn_summary', np.concatenate(all_summary[:split_point]))
     np.save(save_path+'val_summary', np.concatenate(all_summary[split_point:]))
 
 
+'''
 def predictor1_preprocess(folder='Severson_Dataset/feature_selector_discharge/', epoch=[100, 100]):
     selectors = []
     for i in range(1, 3, 1):
@@ -298,7 +314,7 @@ def predictor3_preprocess(folder='Severson_Dataset/feature_selector_discharge/')
     np.save(folder+'predictor3_trn_feature', trn_feature)
     np.save(folder+'predictor3_val_feature', val_feature)
 
-
+'''
 # mat_to_npy()
 # train_val_split(seed=41)
 # predictor1_preprocess()
